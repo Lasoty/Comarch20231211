@@ -5,6 +5,8 @@ namespace BMICalculator.Services
 {
     public class MetricBmiCalculator : IBmiCalculator
     {
+        public DateTime MeasurementDate { get; private set; }
+
         public double CalculateBmi(double weight, double height)
         {
             if (weight <= 0)
@@ -15,6 +17,8 @@ namespace BMICalculator.Services
                 throw new ArgumentException("Height is not a valid number");
 
             var bmi = weight / Math.Pow((height / 100.0), 2);
+            MeasurementDate = DateTime.Today;
+
             return Math.Round(bmi, 2);
         }
     }

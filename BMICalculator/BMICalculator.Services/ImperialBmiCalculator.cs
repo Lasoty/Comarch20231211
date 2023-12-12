@@ -5,6 +5,8 @@ namespace BMICalculator.Services
 {
     public class ImperialBmiCalculator : IBmiCalculator
     {
+        public DateTime MeasurementDate { get; private set; }
+
         public double CalculateBmi(double weight, double height)
         {
             if (weight <= 0)
