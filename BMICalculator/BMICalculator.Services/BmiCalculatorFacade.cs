@@ -14,6 +14,8 @@ namespace BMICalculator.Services
         private readonly IBmiCalculatorFactory bmiCalculatorFactory;
         private readonly IResultRepository resultRepository;
 
+        public event EventHandler BmiSaved;
+
         public BmiCalculatorFacade(
             IBmiDeterminator bmiDeterminator,
             IBmiCalculatorFactory bmiCalculatorFactory,
@@ -25,7 +27,7 @@ namespace BMICalculator.Services
             this.resultRepository = resultRepository;
         }
 
-        private string GetSummary(BmiClassification classification)
+        public string GetSummary(BmiClassification classification)
             => classification switch
             {
                 BmiClassification.Underweight => "You are underweight, you should put on some weight",
@@ -49,15 +51,15 @@ namespace BMICalculator.Services
             var bmi = bmiCalculator.CalculateBmi(weight, height);
             BmiClassification classification = bmiDeterminator.DetermineBmi(bmi);
 
-            if (classification >= BmiClassification.Obesity)
-                SaveResult(new BmiMeasurement
-                {
-                    Id = Guid.NewGuid(),
-                    BmiClassification = classification,
-                    Date = DateTime.Now,
-                    Summary = GetSummary(classification),
-                    Bmi = bmi
-                }).Wait();
+            //if (classification >= BmiClassification.Obesity)
+            SaveResult(new BmiMeasurement
+            {
+                Id = Guid.NewGuid(),
+                BmiClassification = classification,
+                Date = DateTime.Now,
+                Summary = GetSummary(classification),
+                Bmi = bmi
+            }).Wait();
 
             return new BmiResult()
             {
@@ -73,6 +75,7 @@ namespace BMICalculator.Services
             //...
             await resultRepository.SaveResultAsync(result);
 
+            BmiSaved?.Invoke(this, EventArgs.Empty);
             return true;
         }
     }
