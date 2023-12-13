@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Autofac;
 using BMICalculator.Model.DTO;
 using BMICalculator.Model.Model;
 using BMICalculator.Model.Repositories;
@@ -18,9 +19,9 @@ namespace BMICalculator.Services.FluentTests
     {
         private Mock<IBmiCalculatorFactory> _mockFactory;
         private Mock<IBmiCalculator> _mockCalculator;
-        private BmiCalculatorFacade _calculatorFacade;
         private Mock<IBmiDeterminator> _mockBmiDeterminator;
         private Mock<IResultRepository> _mockRepository;
+        private IContainer container;
 
         [SetUp]
         public void Setup()
@@ -31,7 +32,14 @@ namespace BMICalculator.Services.FluentTests
             _mockBmiDeterminator = new Mock<IBmiDeterminator>();
             _mockRepository = new Mock<IResultRepository>();
 
-            _calculatorFacade = new BmiCalculatorFacade(_mockBmiDeterminator.Object, _mockFactory.Object, _mockRepository.Object);
+            ContainerBuilder builder = new();
+            builder.RegisterInstance(_mockFactory.Object).As<IBmiCalculatorFactory>();
+            builder.RegisterInstance(_mockCalculator.Object).As<IBmiCalculator>();
+            builder.RegisterInstance(_mockBmiDeterminator.Object).As<IBmiDeterminator>();
+            builder.RegisterInstance(_mockRepository.Object).As<IResultRepository>();
+            builder.RegisterType<BmiCalculatorFacade>().As<IBmiCalculatorFacade>();
+
+            container = builder.Build();
         }
 
         [Test]
@@ -43,8 +51,10 @@ namespace BMICalculator.Services.FluentTests
                 .Returns(_mockCalculator.Object)
                 .Verifiable();
 
+            IBmiCalculatorFacade calculatorFacade = container.Resolve<IBmiCalculatorFacade>();
+
             //Act
-            _calculatorFacade.GetResult(75, 175, UnitSystem.Metric);
+            calculatorFacade.GetResult(75, 175, UnitSystem.Metric);
 
             //Assert
             _mockFactory.Verify(f => f.CreateCalculator(unit), Times.Once);
@@ -57,9 +67,10 @@ namespace BMICalculator.Services.FluentTests
             _mockCalculator.Setup(c => c.CalculateBmi(weight, height)).Returns(expected);
             _mockFactory.Setup(f => f.CreateCalculator(It.IsAny<UnitSystem>()))
                 .Returns(_mockCalculator.Object);
+            IBmiCalculatorFacade calculatorFacade = container.Resolve<IBmiCalculatorFacade>();
 
             //Act
-            var result = _calculatorFacade.GetResult(weight, height, UnitSystem.Metric);
+            var result = calculatorFacade.GetResult(weight, height, UnitSystem.Metric);
 
             //Assert
             result.Bmi.Should().BeApproximately(expected, 0.01);
@@ -72,9 +83,10 @@ namespace BMICalculator.Services.FluentTests
             _mockCalculator.Setup(c => c.CalculateBmi(It.IsAny<double>(), It.IsAny<double>())).Returns(bmi);
             _mockFactory.Setup(f => f.CreateCalculator(It.IsAny<UnitSystem>())).Returns(_mockCalculator.Object);
             _mockBmiDeterminator.Setup(d => d.DetermineBmi(bmi)).Returns(expectedClassification);
+            IBmiCalculatorFacade calculatorFacade = container.Resolve<IBmiCalculatorFacade>();
 
             // Act
-            var result = _calculatorFacade.GetResult(60, 1.75, UnitSystem.Metric);
+            var result = calculatorFacade.GetResult(60, 1.75, UnitSystem.Metric);
 
             // Assert
             result.BmiClassification.Should().Be(expectedClassification);
@@ -87,16 +99,17 @@ namespace BMICalculator.Services.FluentTests
             _mockCalculator.Setup(c => c.CalculateBmi(It.IsAny<double>(), It.IsAny<double>())).Returns(bmi);
             _mockFactory.Setup(f => f.CreateCalculator(It.IsAny<UnitSystem>())).Returns(_mockCalculator.Object);
             _mockBmiDeterminator.Setup(d => d.DetermineBmi(bmi)).Returns(expectedClassification);
+            IBmiCalculatorFacade calculatorFacade = container.Resolve<IBmiCalculatorFacade>();
 
             BmiResult? expectedResult = new()
             {
                 Bmi = bmi,
                 BmiClassification = expectedClassification,
-                Summary = _calculatorFacade.GetSummary(expectedClassification)
+                Summary = calculatorFacade.GetSummary(expectedClassification)
             };
 
             // Act
-            BmiResult? result = _calculatorFacade.GetResult(60, 175, UnitSystem.Metric);
+            BmiResult? result = calculatorFacade.GetResult(60, 175, UnitSystem.Metric);
 
             // Assert
             //if (expectedResult != result)
@@ -124,9 +137,10 @@ namespace BMICalculator.Services.FluentTests
             _mockRepository.Setup(r => r.SaveResultAsync(It.IsAny<BmiMeasurement>()))
                 .Callback<BmiMeasurement>(m => savedMeasurement = m);
 
+            IBmiCalculatorFacade calculatorFacade = container.Resolve<IBmiCalculatorFacade>();
 
             //Act
-            _calculatorFacade.GetResult(60, 175, UnitSystem.Metric);
+            calculatorFacade.GetResult(60, 175, UnitSystem.Metric);
 
             // Assert
 

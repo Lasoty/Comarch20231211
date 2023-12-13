@@ -83,7 +83,7 @@ namespace BMICalculator.Services
     public interface IBmiCalculatorFacade
     {
         BmiResult GetResult(double weight, double height, UnitSystem unitSystem);
-
+        string GetSummary(BmiClassification classification);
         Task<bool> SaveResult(BmiMeasurement result);
     }
 }
